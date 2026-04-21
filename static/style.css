@@ -234,32 +234,77 @@ code {
 .demo-section {
     margin-bottom: 32px;
     background: rgba(0,0,0,0.2);
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 20px;
+    padding: 32px;
     border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 20px rgba(255,255,255,0.02);
 }
 
-.demo-section h2 {
-    font-size: 1.25rem;
-    margin-bottom: 8px;
+.demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 16px;
+}
+
+.demo-header h2 {
+    font-size: 1.35rem;
     color: var(--text-primary);
 }
 
-.demo-section > p {
-    color: var(--text-secondary);
+.badge {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.step-container {
+    margin-bottom: 24px;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
     font-size: 0.9rem;
-    margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(94, 106, 210, 0.4);
+}
+
+.step-header h3 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
 .upload-container {
-    border: 2px dashed var(--border-color);
-    border-radius: 12px;
-    padding: 30px;
+    border: 2px dashed rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 40px 20px;
     text-align: center;
-    margin-bottom: 20px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
 }
 
 .upload-container:hover, .upload-container.dragover {
@@ -284,6 +329,37 @@ code {
 
 .upload-container:hover .upload-label svg {
     transform: translateY(-4px);
+}
+
+#image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    margin: 0 auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    border-top-color: var(--accent);
+    animation: spin 1s ease-in-out infinite;
+    margin: 0 auto;
+}
+
+.loader-small {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .schema-container {
@@ -316,9 +392,12 @@ textarea:focus {
     box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.2);
 }
 
-#run-btn {
+.run-btn {
     width: 100%;
     cursor: pointer;
+    padding: 16px;
+    font-size: 1.05rem;
+    margin-top: 10px;
 }
 
 #run-btn:disabled {
@@ -329,25 +408,45 @@ textarea:focus {
 }
 
 .result-container {
-    margin-top: 20px;
-    background: rgba(0,0,0,0.4);
-    border-radius: 8px;
-    padding: 16px;
+    margin-top: 24px;
+    background: #000;
+    border-radius: 12px;
+    padding: 20px;
     border: 1px solid rgba(16, 185, 129, 0.3);
     animation: fadeIn 0.4s ease-out;
+    position: relative;
 }
 
-.result-container h3 {
-    font-size: 0.95rem;
-    margin-bottom: 12px;
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.result-header h3 {
+    font-size: 1rem;
     color: var(--success);
+    font-weight: 600;
 }
 
 .result-container pre {
     white-space: pre-wrap;
     word-break: break-all;
     font-size: 0.85rem;
-    color: var(--text-primary);
-    max-height: 250px;
+    color: #a6accd;
+    max-height: 350px;
     overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+}
+
+.result-container pre::-webkit-scrollbar {
+    width: 8px;
+}
+
+.result-container pre::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
 }

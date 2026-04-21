@@ -8,6 +8,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <!-- PDF.js for frontend PDF to Image conversion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 <body>
     <div class="glass-container">
@@ -40,36 +46,54 @@
             </div>
 
             <section class="demo-section">
-                <h2>Try it Out</h2>
-                <p>Test the extraction directly. Limit 3 requests/day without an API key.</p>
+                <div class="demo-header">
+                    <h2>Live Extraction Demo</h2>
+                    <span class="badge">3 Free Requests / Day</span>
+                </div>
                 
-                <div class="upload-container" id="drop-zone" onclick="document.getElementById('file-input').click()">
-                    <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
-                    <div class="upload-label" id="upload-label">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                        <span>Drag & drop an image or click to browse</span>
+                <div class="step-container">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <h3>Upload Document</h3>
                     </div>
-                    <img id="image-preview" style="display: none; max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 8px; margin-left: auto; margin-right: auto;" />
+                    <div class="upload-container" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                        <input type="file" id="file-input" accept="image/*,application/pdf" hidden onchange="handleFile(this.files[0])">
+                        <div class="upload-label" id="upload-label">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                            <span>Drag & drop an image or PDF, or click to browse</span>
+                        </div>
+                        <div id="upload-loader" class="loader" style="display: none;"></div>
+                        <img id="image-preview" style="display: none;" />
+                    </div>
                 </div>
 
-                <div class="schema-container">
-                    <label for="schema-input">Extraction Schema Prompt:</label>
-                    <textarea id="schema-input" rows="7">Extract the following information from this invoice as a valid JSON object:
+                <div class="step-container">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <h3>Extraction Schema</h3>
+                    </div>
+                    <div class="schema-container">
+                        <textarea id="schema-input" rows="7" spellcheck="false">Extract the following information from this invoice as a valid JSON object:
 {
   "invoice_number": "",
   "date": "",
   "vendor_name": "",
   "total_amount": ""
 }</textarea>
+                    </div>
                 </div>
                 
-                <button class="btn primary-btn" id="run-btn" disabled onclick="runExtraction()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <button class="btn primary-btn run-btn" id="run-btn" disabled onclick="runExtraction()">
+                    <svg id="run-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <div id="run-loader" class="loader-small" style="display: none;"></div>
                     <span id="run-btn-text">Run Extraction</span>
                 </button>
 
                 <div class="result-container" id="result-container" style="display: none;">
-                    <h3>Result</h3>
+                    <div class="result-header">
+                        <h3 id="result-title">Result</h3>
+                        <button class="copy-btn" id="copy-result-btn" onclick="copyResult()">Copy JSON</button>
+                    </div>
                     <pre><code id="result-output"></code></pre>
                 </div>
             </section>
@@ -128,28 +152,75 @@
 
         // Upload and Extraction Logic
         let currentBase64 = null;
+        let lastResultText = "";
 
-        function handleFile(file) {
+        function resetUploadUI() {
+            document.getElementById('upload-loader').style.display = 'none';
+            document.getElementById('upload-label').style.display = 'flex';
+            document.getElementById('file-input').value = "";
+        }
+
+        function finishFileLoad(base64Url) {
+            document.getElementById('upload-loader').style.display = 'none';
+            const preview = document.getElementById('image-preview');
+            preview.src = base64Url;
+            preview.style.display = 'block';
+            document.getElementById('run-btn').disabled = false;
+        }
+
+        async function handleFile(file) {
             if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                alert('Please upload an image file.');
-                return;
-            }
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64Url = e.target.result;
-                currentBase64 = base64Url.split(',')[1]; // Remove data URL prefix
-                
-                document.getElementById('upload-label').style.display = 'none';
-                const preview = document.getElementById('image-preview');
-                preview.src = base64Url;
-                preview.style.display = 'block';
-                
-                document.getElementById('run-btn').disabled = false;
-                document.getElementById('result-container').style.display = 'none';
-            };
-            reader.readAsDataURL(file);
+            const preview = document.getElementById('image-preview');
+            const runBtn = document.getElementById('run-btn');
+            const resultContainer = document.getElementById('result-container');
+            const uploadLabel = document.getElementById('upload-label');
+            const loader = document.getElementById('upload-loader');
+            
+            uploadLabel.style.display = 'none';
+            resultContainer.style.display = 'none';
+            preview.style.display = 'none';
+            runBtn.disabled = true;
+            loader.style.display = 'block';
+
+            if (file.type === 'application/pdf') {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const typedarray = new Uint8Array(arrayBuffer);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    
+                    // Extract first page
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 1.5 }); // Higher scale for better OCR quality
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    // Convert canvas to base64 jpeg
+                    const base64Url = canvas.toDataURL('image/jpeg', 0.9);
+                    currentBase64 = base64Url.split(',')[1];
+                    
+                    finishFileLoad(base64Url);
+                } catch (err) {
+                    alert('Error reading PDF: ' + err.message);
+                    resetUploadUI();
+                }
+            } else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Url = e.target.result;
+                    currentBase64 = base64Url.split(',')[1];
+                    finishFileLoad(base64Url);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please upload an image or PDF file.');
+                resetUploadUI();
+            }
         }
 
         // Drag and drop setup
@@ -183,50 +254,81 @@
 
             const btnText = document.getElementById('run-btn-text');
             const runBtn = document.getElementById('run-btn');
+            const runIcon = document.getElementById('run-icon');
+            const runLoader = document.getElementById('run-loader');
             const prompt = document.getElementById('schema-input').value;
             const resultContainer = document.getElementById('result-container');
             const resultOutput = document.getElementById('result-output');
+            const resultTitle = document.getElementById('result-title');
 
             runBtn.disabled = true;
-            btnText.textContent = 'Processing...';
+            btnText.textContent = 'Processing Document...';
+            runIcon.style.display = 'none';
+            runLoader.style.display = 'block';
             resultContainer.style.display = 'none';
 
             try {
                 const response = await fetch('/api/v1/vision/extract', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image_base64: currentBase64,
-                        prompt: prompt
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_base64: currentBase64, prompt: prompt })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    resultOutput.textContent = data.text;
+                    
+                    // Try to pretty print JSON if the model returned valid JSON (sometimes it wraps in markdown ```json)
+                    let cleanText = data.text.replace(/```json\n?/g, '').replace(/```/g, '').trim();
+                    try {
+                        const parsed = JSON.parse(cleanText);
+                        lastResultText = JSON.stringify(parsed, null, 2);
+                    } catch (e) {
+                        lastResultText = cleanText; // fallback to raw string
+                    }
+                    
+                    resultOutput.textContent = lastResultText;
                     resultContainer.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-                    resultContainer.querySelector('h3').style.color = 'var(--success)';
-                    resultContainer.querySelector('h3').textContent = 'Result';
+                    resultTitle.style.color = 'var(--success)';
+                    resultTitle.textContent = 'Extraction Successful';
                 } else {
                     const errorText = await response.text();
-                    resultOutput.textContent = `Error: ${response.status}\n${errorText}`;
+                    lastResultText = `Error: ${response.status}\n${errorText}`;
+                    resultOutput.textContent = lastResultText;
                     resultContainer.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-                    resultContainer.querySelector('h3').style.color = 'var(--error)';
-                    resultContainer.querySelector('h3').textContent = 'Error';
+                    resultTitle.style.color = 'var(--error)';
+                    resultTitle.textContent = 'Extraction Failed';
                 }
                 resultContainer.style.display = 'block';
+                // Scroll to result
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             } catch (error) {
-                resultOutput.textContent = `Request failed: ${error.message}`;
+                lastResultText = `Request failed: ${error.message}`;
+                resultOutput.textContent = lastResultText;
                 resultContainer.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-                resultContainer.querySelector('h3').style.color = 'var(--error)';
-                resultContainer.querySelector('h3').textContent = 'Error';
+                resultTitle.style.color = 'var(--error)';
+                resultTitle.textContent = 'Network Error';
                 resultContainer.style.display = 'block';
             } finally {
                 runBtn.disabled = false;
                 btnText.textContent = 'Run Extraction';
+                runIcon.style.display = 'block';
+                runLoader.style.display = 'none';
             }
+        }
+
+        function copyResult() {
+            navigator.clipboard.writeText(lastResultText).then(() => {
+                const btn = document.getElementById('copy-result-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.color = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2000);
+            });
         }
     </script>
 </body>
