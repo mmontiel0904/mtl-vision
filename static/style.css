@@ -230,3 +230,124 @@ code {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
 }
+
+.demo-section {
+    margin-bottom: 32px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.demo-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.demo-section > p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.upload-container {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.upload-container:hover, .upload-container.dragover {
+    border-color: var(--accent);
+    background: rgba(94, 106, 210, 0.08);
+    transform: scale(1.02);
+}
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.upload-label svg {
+    color: var(--accent);
+    transition: transform 0.3s ease;
+}
+
+.upload-container:hover .upload-label svg {
+    transform: translateY(-4px);
+}
+
+.schema-container {
+    margin-bottom: 20px;
+}
+
+.schema-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.2);
+}
+
+#run-btn {
+    width: 100%;
+    cursor: pointer;
+}
+
+#run-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.result-container {
+    margin-top: 20px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.result-container h3 {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    color: var(--success);
+}
+
+.result-container pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    max-height: 250px;
+    overflow-y: auto;
+}

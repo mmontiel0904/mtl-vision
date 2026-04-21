@@ -1,6 +1,8 @@
 use axum::{extract::State, http::StatusCode, Json};
 use reqwest::Client;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::collections::HashMap;
+use std::time::SystemTime;
 
 use crate::models::{
     ExtractRequest, ExtractResponse, OllamaGenerateRequest, OllamaGenerateResponse, OllamaModelList,
@@ -10,6 +12,7 @@ use crate::models::{
 pub struct AppState {
     pub http_client: Client,
     pub ollama_url: String,
+    pub rate_limits: RwLock<HashMap<String, Vec<SystemTime>>>,
 }
 
 #[utoipa::path(

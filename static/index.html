@@ -39,6 +39,41 @@
                 </a>
             </div>
 
+            <section class="demo-section">
+                <h2>Try it Out</h2>
+                <p>Test the extraction directly. Limit 3 requests/day without an API key.</p>
+                
+                <div class="upload-container" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
+                    <div class="upload-label" id="upload-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        <span>Drag & drop an image or click to browse</span>
+                    </div>
+                    <img id="image-preview" style="display: none; max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 8px; margin-left: auto; margin-right: auto;" />
+                </div>
+
+                <div class="schema-container">
+                    <label for="schema-input">Extraction Schema Prompt:</label>
+                    <textarea id="schema-input" rows="7">Extract the following information from this invoice as a valid JSON object:
+{
+  "invoice_number": "",
+  "date": "",
+  "vendor_name": "",
+  "total_amount": ""
+}</textarea>
+                </div>
+                
+                <button class="btn primary-btn" id="run-btn" disabled onclick="runExtraction()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span id="run-btn-text">Run Extraction</span>
+                </button>
+
+                <div class="result-container" id="result-container" style="display: none;">
+                    <h3>Result</h3>
+                    <pre><code id="result-output"></code></pre>
+                </div>
+            </section>
+
             <section class="auth-details">
                 <h3>Authentication</h3>
                 <p>All endpoints require the following header:</p>
@@ -90,6 +125,109 @@
         // Check immediately and every 10 seconds
         checkStatus();
         setInterval(checkStatus, 10000);
+
+        // Upload and Extraction Logic
+        let currentBase64 = null;
+
+        function handleFile(file) {
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Url = e.target.result;
+                currentBase64 = base64Url.split(',')[1]; // Remove data URL prefix
+                
+                document.getElementById('upload-label').style.display = 'none';
+                const preview = document.getElementById('image-preview');
+                preview.src = base64Url;
+                preview.style.display = 'block';
+                
+                document.getElementById('run-btn').disabled = false;
+                document.getElementById('result-container').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Drag and drop setup
+        const dropZone = document.getElementById('drop-zone');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFile(files[0]);
+        }, false);
+
+        async function runExtraction() {
+            if (!currentBase64) return;
+
+            const btnText = document.getElementById('run-btn-text');
+            const runBtn = document.getElementById('run-btn');
+            const prompt = document.getElementById('schema-input').value;
+            const resultContainer = document.getElementById('result-container');
+            const resultOutput = document.getElementById('result-output');
+
+            runBtn.disabled = true;
+            btnText.textContent = 'Processing...';
+            resultContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/v1/vision/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_base64: currentBase64,
+                        prompt: prompt
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultOutput.textContent = data.text;
+                    resultContainer.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                    resultContainer.querySelector('h3').style.color = 'var(--success)';
+                    resultContainer.querySelector('h3').textContent = 'Result';
+                } else {
+                    const errorText = await response.text();
+                    resultOutput.textContent = `Error: ${response.status}\n${errorText}`;
+                    resultContainer.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                    resultContainer.querySelector('h3').style.color = 'var(--error)';
+                    resultContainer.querySelector('h3').textContent = 'Error';
+                }
+                resultContainer.style.display = 'block';
+            } catch (error) {
+                resultOutput.textContent = `Request failed: ${error.message}`;
+                resultContainer.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                resultContainer.querySelector('h3').style.color = 'var(--error)';
+                resultContainer.querySelector('h3').textContent = 'Error';
+                resultContainer.style.display = 'block';
+            } finally {
+                runBtn.disabled = false;
+                btnText.textContent = 'Run Extraction';
+            }
+        }
     </script>
 </body>
 </html>

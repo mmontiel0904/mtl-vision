@@ -72,6 +72,7 @@ async fn main() {
     let state = Arc::new(AppState {
         http_client: Client::new(),
         ollama_url,
+        rate_limits: std::sync::RwLock::new(std::collections::HashMap::new()),
     });
 
     // Create static file serving directory
@@ -93,5 +94,5 @@ async fn main() {
     tracing::info!("Server starting on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app.into_make_service_with_connect_info::<std::net::SocketAddr>()).await.unwrap();
 }
