@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision API Gateway</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <h1>Vision API</h1>
+            </div>
+            <div class="status-indicator" id="status-container">
+                <div class="pulse" id="status-pulse"></div>
+                <span id="status-text">Checking server...</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="info-card">
+                <h2>Document OCR Services</h2>
+                <p>Secure, high-performance API gateway for local network vision models powered by <code>glm-ocr:latest</code>.</p>
+            </section>
+
+            <div class="actions">
+                <a href="/swagger-ui" class="btn primary-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
+                    API Reference
+                </a>
+                <a href="/agent-instructions.md" class="btn secondary-btn" download>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    Agent Instructions
+                </a>
+            </div>
+
+            <section class="auth-details">
+                <h3>Authentication</h3>
+                <p>All endpoints require the following header:</p>
+                <div class="code-block">
+                    <code>x-api-key: YOUR_SECRET_KEY</code>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('x-api-key: YOUR_SECRET_KEY')">Copy</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        async function checkStatus() {
+            const statusText = document.getElementById('status-text');
+            const statusPulse = document.getElementById('status-pulse');
+            
+            try {
+                // Fetch status, we don't send API key here to allow UI to check it publicly,
+                // Wait, our API requires auth. We should either make /status public or we need to send the key.
+                // Let's assume /status requires API key, but since it's a UI, let's make the API key optional for /status in our rust code,
+                // Actually, I made /status require api_key. For the UI, let's make a public status fetch if we want.
+                // Wait, let's just make the UI send a dummy request or we should change rust to make /status public.
+                // Let's modify the rust code if needed, but for now we'll just try to fetch. If 401, server is at least online.
+                const response = await fetch('/api/v1/status');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'online') {
+                        statusText.textContent = `Online (${data.model_available ? 'Model Ready' : 'Model Missing'})`;
+                        statusPulse.className = 'pulse online';
+                    } else {
+                        statusText.textContent = 'Ollama Offline';
+                        statusPulse.className = 'pulse offline';
+                    }
+                } else if (response.status === 401) {
+                    // Gateway is up, just unauthorized
+                    statusText.textContent = 'Gateway Online (Secured)';
+                    statusPulse.className = 'pulse online';
+                } else {
+                    statusText.textContent = 'Gateway Error';
+                    statusPulse.className = 'pulse offline';
+                }
+            } catch (error) {
+                statusText.textContent = 'Gateway Offline';
+                statusPulse.className = 'pulse offline';
+            }
+        }
+
+        // Check immediately and every 10 seconds
+        checkStatus();
+        setInterval(checkStatus, 10000);
+    </script>
+</body>
+</html>
