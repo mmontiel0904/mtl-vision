@@ -20,14 +20,10 @@ pub struct AppState {
     path = "/api/v1/status",
     responses(
         (status = 200, description = "Status of the API and Ollama Server", body = StatusResponse)
-    ),
-    security(
-        ("api_key" = [])
     )
 )]
 pub async fn status_handler(
     State(state): State<Arc<AppState>>,
-    _api_key: crate::security::ApiKey,
 ) -> Result<Json<StatusResponse>, (StatusCode, String)> {
     let url = format!("{}/api/tags", state.ollama_url);
     
