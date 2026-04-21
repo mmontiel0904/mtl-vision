@@ -29,19 +29,55 @@ cargo build --release
 
 The server will start on `http://0.0.0.0:8000` (or whatever `PORT` you specified).
 
-## Exposing via Cloudflare Tunnels
-To securely expose this API gateway to the internet without opening firewall ports:
+## Exposing via Cloudflare Tunnels (Production Setup)
+To securely expose this API gateway to the internet as an "always-on" service without opening firewall ports:
 
-1. Install `cloudflared` on the server.
-2. Login to Cloudflare:
+1. **Install `cloudflared`:**
+   ```bash
+   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+   sudo dpkg -i cloudflared.deb
+   ```
+
+2. **Login and Create Tunnel:**
    ```bash
    cloudflared tunnel login
+   cloudflared tunnel create vision-api
    ```
-3. Create a tunnel and route traffic to the local port:
+   *Note the Tunnel ID that is outputted.*
+
+3. **Route Traffic:**
    ```bash
-   cloudflared tunnel --url http://localhost:8000
+   # Replace with your domain
+   cloudflared tunnel route dns vision-api vision.yourdomain.com
    ```
-*(For production, it is recommended to set up the tunnel as a background service via the Cloudflare Zero Trust dashboard).*
+
+4. **Configure System Service Paths:**
+   Because `cloudflared service install` requires root access, it expects the config and credentials in `/etc/cloudflared/`, not your user directory.
+   ```bash
+   sudo mkdir -p /etc/cloudflared
+   sudo cp ~/.cloudflared/*.json /etc/cloudflared/
+   sudo nano /etc/cloudflared/config.yml
+   ```
+
+5. **Create the Configuration:**
+   Paste the following into `/etc/cloudflared/config.yml` (replace `<Tunnel-ID>`):
+   ```yaml
+   tunnel: <Tunnel-ID>
+   credentials-file: /etc/cloudflared/<Tunnel-ID>.json
+
+   ingress:
+     - hostname: vision.yourdomain.com
+       service: http://localhost:8000
+     - service: http_status:404
+   ```
+
+6. **Install and Start the Background Service:**
+   ```bash
+   sudo cloudflared service install
+   sudo systemctl enable cloudflared
+   sudo systemctl start cloudflared
+   ```
+   *Your API and Status Dashboard are now persistently available and will auto-restart on server reboot.*
 
 ## Features
 - **UI Dashboard**: Visit the root URL for a sleek, real-time server status page.
