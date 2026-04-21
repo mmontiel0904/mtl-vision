@@ -30,6 +30,7 @@ pub struct OllamaGenerateRequest {
     pub images: Vec<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct OllamaGenerateResponse {
     pub response: String,
