@@ -21,6 +21,17 @@ pub struct ExtractResponse {
     pub text: String,
 }
 
+/// Schema for the multipart PDF upload endpoint (used only for OpenAPI docs).
+#[allow(dead_code)]
+#[derive(ToSchema)]
+pub struct PdfExtractRequest {
+    /// PDF file bytes (binary upload)
+    #[schema(value_type = String, format = Binary)]
+    pub file: Vec<u8>,
+    /// Optional OCR prompt. Defaults to "Extract all text from this image."
+    pub prompt: Option<String>,
+}
+
 // Ollama API Request Models
 #[derive(Serialize)]
 pub struct OllamaGenerateRequest {

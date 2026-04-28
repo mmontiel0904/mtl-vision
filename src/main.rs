@@ -20,19 +20,21 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
-use handlers::{extract_handler, status_handler, AppState};
+use handlers::{extract_handler, pdf_extract_handler, status_handler, AppState};
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         handlers::status_handler,
         handlers::extract_handler,
+        handlers::pdf_extract_handler,
     ),
     components(
         schemas(
             models::StatusResponse,
             models::ExtractRequest,
             models::ExtractResponse,
+            models::PdfExtractRequest,
         )
     ),
     modifiers(&SecurityAddon),
@@ -81,6 +83,7 @@ async fn main() {
     let api_routes = Router::new()
         .route("/status", get(status_handler))
         .route("/vision/extract", post(extract_handler))
+        .route("/vision/extract/pdf", post(pdf_extract_handler))
         .with_state(state);
 
     let app = Router::new()
